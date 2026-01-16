@@ -2,15 +2,20 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"golang-ai/internal/entity"
+	"golang-ai/internal/pkg/serverutils"
 	"golang-ai/pkg/database"
 
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type INotebookRepository interface {
 	UsingTx(ctx context.Context, tx database.DatabaseQueryer) INotebookRepository
 	Create(ctx context.Context, notebook *entity.Notebook) error
+	GetById(ctx context.Context, id uuid.UUID) (*entity.Notebook, error)
 }
 
 type notebookRepository struct {
@@ -41,7 +46,30 @@ func (n *notebookRepository) Create(ctx context.Context, notebook *entity.Notebo
 
 	return nil
 }
+func (n *notebookRepository) GetById(ctx context.Context, id uuid.UUID) (*entity.Notebook, error) {
+	var notebook entity.Notebook
+	err := n.db.QueryRow(
+		ctx,
+		`SELECT id, name, parent_id, created_at, updated_at, deleted_at, is_deleted FROM notebook n WHERE n.is_deleted = false AND n.id = $1`,
+		id,
+	).Scan(
+		&notebook.Id,
+		&notebook.Name,
+		&notebook.ParentId,
+		&notebook.CreatedAt,
+		&notebook.UpdatedAt,
+		&notebook.DeletedAt,
+		&notebook.IsDeleted,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, serverutils.ErrNotFound
+		}
+		return nil, err
+	}
 
+	return &notebook, nil
+}
 func NewNotebookRepository(db *pgxpool.Pool) INotebookRepository {
 	return &notebookRepository{
 		db: db,
