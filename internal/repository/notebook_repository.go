@@ -16,6 +16,7 @@ type INotebookRepository interface {
 	UsingTx(ctx context.Context, tx database.DatabaseQueryer) INotebookRepository
 	Create(ctx context.Context, notebook *entity.Notebook) error
 	GetById(ctx context.Context, id uuid.UUID) (*entity.Notebook, error)
+	Update(ctx context.Context, notebook *entity.Notebook) error
 }
 
 type notebookRepository struct {
@@ -39,6 +40,21 @@ func (n *notebookRepository) Create(ctx context.Context, notebook *entity.Notebo
 		notebook.UpdatedAt,
 		notebook.DeletedAt,
 		notebook.IsDeleted,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+func (n *notebookRepository) Update(ctx context.Context, notebook *entity.Notebook) error {
+	_, err := n.db.Exec(
+		ctx,
+		`UPDATE notebook SET name = $2, parent_id = $3, updated_at = $4 WHERE id = $1`,
+		notebook.Id,
+		notebook.Name,
+		notebook.ParentId,
+		notebook.UpdatedAt,
 	)
 	if err != nil {
 		return err
