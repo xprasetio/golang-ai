@@ -14,9 +14,11 @@ import (
 
 type INotebookService interface {
 	Create(ctx context.Context, req *dto.CreateNotebookRequest) (*dto.CreateNotebookResponse, error)
+	GetAll(ctx context.Context) ([]*dto.GetAllNotebooksResponse, error)
 	Show(ctx context.Context, id uuid.UUID) (*dto.ShowNotebookResponse, error)
 	Update(ctx context.Context, req *dto.UpdateNotebookRequest) (*dto.UpdateNotebookResponse, error)
 	Delete(ctx context.Context, id uuid.UUID) error
+	MoveNoteBook(ctx context.Context, req *dto.MoveNotebookRequest) (*dto.MoveNotebookResponse, error)
 }
 
 type notebookService struct {
@@ -47,6 +49,24 @@ func (c *notebookService) Create(ctx context.Context, req *dto.CreateNotebookReq
 	return &dto.CreateNotebookResponse{
 		Id: notebook.Id,
 	}, nil
+}
+func (c *notebookService) GetAll(ctx context.Context) ([]*dto.GetAllNotebooksResponse, error) {
+	notebooks, err := c.notebookRepository.GetAll(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var res []*dto.GetAllNotebooksResponse
+	for _, notebook := range notebooks {
+		res = append(res, &dto.GetAllNotebooksResponse{
+			Id:        notebook.Id,
+			Name:      notebook.Name,
+			ParentId:  notebook.ParentId,
+			CreatedAt: notebook.CreatedAt,
+			UpdatedAt: notebook.UpdatedAt,
+		})
+	}
+	return res, nil
 }
 
 func (c *notebookService) Show(ctx context.Context, id uuid.UUID) (*dto.ShowNotebookResponse, error) {
@@ -110,5 +130,28 @@ func (c *notebookService) Delete(ctx context.Context, id uuid.UUID) error {
 	}
 
 	return nil
+
+}
+
+func (c *notebookService) MoveNoteBook(ctx context.Context, req *dto.MoveNotebookRequest) (*dto.MoveNotebookResponse, error) {
+	_, err := c.notebookRepository.GetById(ctx, req.Id)
+	if err != nil {
+		return nil, err
+	}
+	if req.ParentId != nil {
+		_, err = c.notebookRepository.GetById(ctx, *req.ParentId)
+		if err != nil {
+			return nil, err
+		}
+	}
+	err = c.notebookRepository.UpdateParentId(ctx, req.Id, req.ParentId)
+	if err != nil {
+		return nil, err
+	}
+
+	res := dto.MoveNotebookResponse{
+		Id: req.Id,
+	}
+	return &res, nil
 
 }

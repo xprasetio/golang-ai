@@ -30,3 +30,18 @@ type UpdateNotebookRequest struct {
 type UpdateNotebookResponse struct {
 	Id uuid.UUID `json:"id"`
 }
+type MoveNotebookRequest struct {
+	Id       uuid.UUID  `json:"id" validate:"required,uuid4"`
+	ParentId *uuid.UUID `json:"parent_id"`
+}
+
+type MoveNotebookResponse struct {
+	Id uuid.UUID `json:"id"`
+}
+type GetAllNotebooksResponse struct {
+	Id        uuid.UUID  `json:"id"`
+	Name      string     `json:"name"`
+	ParentId  *uuid.UUID `json:"parent_id"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt *time.Time `json:"updated_at"`
+}
