@@ -35,3 +35,12 @@ type UpdateNoteResponse struct {
 	Content    string    `json:"content"`
 	NotebookId uuid.UUID `json:"notebook_id"`
 }
+
+type MoveNoteRequest struct {
+	Id         uuid.UUID
+	NotebookId uuid.UUID `json:"notebook_id" validate:"required,uuid4"`
+}
+
+type MoveNoteResponse struct {
+	Id uuid.UUID `json:"id"`
+}
