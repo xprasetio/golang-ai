@@ -17,6 +17,7 @@ type INoteRepository interface {
 	Create(ctx context.Context, note *entity.Note) error
 	GetById(ctx context.Context, id uuid.UUID) (*entity.Note, error)
 	Update(ctx context.Context, note *entity.Note) error
+	Delete(ctx context.Context, id uuid.UUID) error
 }
 
 type noteRepository struct {
@@ -89,6 +90,17 @@ func (n *noteRepository) Update(ctx context.Context, note *entity.Note) error {
 		return err
 	}
 
+	return nil
+}
+func (n *noteRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	_, err := n.db.Exec(
+		ctx,
+		`UPDATE note SET is_deleted = true, deleted_at = NOW() WHERE id = $1`,
+		id,
+	)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 func NewNoteRepository(db *pgxpool.Pool) INoteRepository {
