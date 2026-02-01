@@ -15,6 +15,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type IConsumerService interface {
@@ -27,15 +28,18 @@ type consumerService struct {
 	noteEmbeddingRepository repository.INoteEmbeddingRepository
 	topicName               string
 	noteRepository          repository.INoteRepository
+
+	db *pgxpool.Pool
 }
 
-func NewConsumerService(pubsub *gochannel.GoChannel, notebookRepository repository.INotebookRepository, topicName string, noteRepository repository.INoteRepository, noteEmbeddingRepository repository.INoteEmbeddingRepository) IConsumerService {
+func NewConsumerService(pubsub *gochannel.GoChannel, notebookRepository repository.INotebookRepository, topicName string, noteRepository repository.INoteRepository, noteEmbeddingRepository repository.INoteEmbeddingRepository, db *pgxpool.Pool) IConsumerService {
 	return &consumerService{
 		notebookRepository:      notebookRepository,
 		pubsub:                  pubsub,
 		topicName:               topicName,
 		noteRepository:          noteRepository,
 		noteEmbeddingRepository: noteEmbeddingRepository,
+		db:                      db,
 	}
 }
 
@@ -97,7 +101,27 @@ func (c *consumerService) processMessage(ctx context.Context, msg *message.Messa
 		NotekId:        note.Id,
 		CreatedAt:      time.Now(),
 	}
-	err = c.noteEmbeddingRepository.Create(ctx, &noteEmbedding)
+	tx, err := c.db.Begin(ctx)
+	if err != nil {
+		panic(err)
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback(ctx)
+		} else {
+			err = tx.Commit(ctx)
+			if err != nil {
+				panic(err)
+			}
+		}
+	}()
+	noteEmbeddingRepository := c.noteEmbeddingRepository.UsingTx(ctx, tx)
+
+	err = noteEmbeddingRepository.DeleteByNoteId(ctx, note.Id)
+	if err != nil {
+		panic(err)
+	}
+	err = noteEmbeddingRepository.Create(ctx, &noteEmbedding)
 	if err != nil {
 		panic(err)
 	}

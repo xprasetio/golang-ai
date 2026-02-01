@@ -5,6 +5,7 @@ import (
 	"golang-ai/internal/entity"
 	"golang-ai/pkg/database"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pgvector/pgvector-go"
 )
@@ -12,6 +13,7 @@ import (
 type INoteEmbeddingRepository interface {
 	UsingTx(ctx context.Context, tx database.DatabaseQueryer) INoteEmbeddingRepository
 	Create(ctx context.Context, noteEmbedding *entity.NoteEmbedding) error
+	DeleteByNoteId(ctx context.Context, noteId uuid.UUID) error
 }
 
 type noteEmbeddingRepository struct {
@@ -37,6 +39,17 @@ func (n *noteEmbeddingRepository) Create(ctx context.Context, noteEmbedding *ent
 		noteEmbedding.UpdatedAt,
 		noteEmbedding.DeletedAt,
 		noteEmbedding.IsDeleted,
+	)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func (n *noteEmbeddingRepository) DeleteByNoteId(ctx context.Context, noteId uuid.UUID) error {
+	_, err := n.db.Exec(
+		ctx,
+		`UPDATE note_embedding SET is_deleted = true, deleted_at = NOW() WHERE note_id = $1`,
+		noteId,
 	)
 	if err != nil {
 		return err
