@@ -37,13 +37,14 @@ func main() {
 	exampleRepository := repository.NewExampleRepository(db)
 	notebookRepository := repository.NewNotebookRepository(db)
 	noteRepository := repository.NewNoteRepository(db)
+	noteEmbeddingRepository := repository.NewNoteEmbeddingRepository(db)
 
 	watermillLogger := watermill.NewStdLogger(false, false)
 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, watermillLogger)
 
-	publisherService := service.NewPublisherService(pubsub, "embed_note_topic")
+	publisherService := service.NewPublisherService(pubsub, os.Getenv("PUBLISH_EMBED_NOTE_TOPIC"))
 
-	consumerService := service.NewConsumerService(pubsub, "embed_note_topic")
+	consumerService := service.NewConsumerService(pubsub, os.Getenv("PUBLISH_EMBED_NOTE_TOPIC"), noteRepository, noteEmbeddingRepository)
 
 	exampleService := service.NewExampleService(exampleRepository)
 	notebookService := service.NewNotebookService(notebookRepository, noteRepository, db)
