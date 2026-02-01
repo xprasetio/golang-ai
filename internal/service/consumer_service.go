@@ -22,14 +22,16 @@ type IConsumerService interface {
 }
 
 type consumerService struct {
+	notebookRepository      repository.INotebookRepository
 	pubsub                  *gochannel.GoChannel
 	noteEmbeddingRepository repository.INoteEmbeddingRepository
 	topicName               string
 	noteRepository          repository.INoteRepository
 }
 
-func NewConsumerService(pubsub *gochannel.GoChannel, topicName string, noteRepository repository.INoteRepository, noteEmbeddingRepository repository.INoteEmbeddingRepository) IConsumerService {
+func NewConsumerService(pubsub *gochannel.GoChannel, notebookRepository repository.INotebookRepository, topicName string, noteRepository repository.INoteRepository, noteEmbeddingRepository repository.INoteEmbeddingRepository) IConsumerService {
 	return &consumerService{
+		notebookRepository:      notebookRepository,
 		pubsub:                  pubsub,
 		topicName:               topicName,
 		noteRepository:          noteRepository,
@@ -57,21 +59,40 @@ func (c *consumerService) processMessage(ctx context.Context, msg *message.Messa
 		fmt.Println("Error fetching note:", err)
 		panic(err)
 	}
+	notebook, err := c.notebookRepository.GetById(ctx, note.NotebookId)
+	if err != nil {
+		panic(err)
+	}
+	noteUpdatedAt := "-"
+	if note.UpdatedAt != nil {
+		noteUpdatedAt = note.UpdatedAt.Format(time.RFC3339)
+	}
+	content := fmt.Sprintf(`
+	Note Title: %s
+	Notebook Title: %s
+
+	%s
+
+	Created At: %s
+	Updated At: %s
+	`, note.Title,
+		notebook.Name,
+		note.Content,
+		note.CreatedAt.Format(time.RFC3339),
+		noteUpdatedAt,
+	)
 
 	res, err := embedding.GetGeminiEmbedding(
 		os.Getenv("GOOGLE_GEMINI_API_KEY"),
-		note.Content,
+		content,
 	)
 	if err != nil {
 		panic(err)
 	}
-	// embeddingFloat32 := make([]float32, len(res.Embedding.Values))
-	// for i, v := range res.Embedding.Values {
-	// 	embeddingFloat32[i] = float32(v)
-	// }
+
 	noteEmbedding := entity.NoteEmbedding{
 		Id:             uuid.New(),
-		Document:       note.Content,
+		Document:       content,
 		EmbeddingValue: res.Embedding.Values,
 		NotekId:        note.Id,
 		CreatedAt:      time.Now(),

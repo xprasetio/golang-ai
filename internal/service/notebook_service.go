@@ -58,7 +58,7 @@ func (c *notebookService) GetAll(ctx context.Context) ([]*dto.GetAllNotebooksRes
 		return nil, err
 	}
 
-	ids := make([]uuid.UUID, 0, len(notebooks))
+	ids := make([]uuid.UUID, 0)
 
 	result := []*dto.GetAllNotebooksResponse{}
 	for _, notebook := range notebooks {

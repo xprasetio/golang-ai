@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"fmt"
 	"golang-ai/internal/dto"
 	"golang-ai/internal/pkg/serverutils"
 	"golang-ai/internal/service"
@@ -39,9 +40,12 @@ func (c *notebookController) RegisterRoutes(r fiber.Router) {
 
 func (c *notebookController) Create(ctx *fiber.Ctx) error {
 	var req dto.CreateNotebookRequest
+	
 	if err := ctx.BodyParser(&req); err != nil {
 		return err
 	}
+
+	fmt.Println("Parent ID:", req.ParentId)
 
 	err := serverutils.ValidateRequest(req)
 	if err != nil {
