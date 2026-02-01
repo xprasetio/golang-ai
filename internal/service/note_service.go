@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"golang-ai/internal/dto"
 	"golang-ai/internal/entity"
 	"golang-ai/internal/repository"
@@ -19,12 +20,14 @@ type INoteService interface {
 }
 
 type noteService struct {
-	noteRepository repository.INoteRepository
+	noteRepository   repository.INoteRepository
+	publisherService IPublisherService
 }
 
-func NewNoteService(noteRepository repository.INoteRepository) INoteService {
+func NewNoteService(noteRepository repository.INoteRepository, publisherService IPublisherService) INoteService {
 	return &noteService{
-		noteRepository: noteRepository,
+		noteRepository:   noteRepository,
+		publisherService: publisherService,
 	}
 }
 
@@ -41,6 +44,15 @@ func (c *noteService) Create(ctx context.Context, req *dto.CreateNoteRequest) (*
 		return nil, err
 	}
 
+	msgPayload := dto.PublishEmbedNoteMessage{
+		NoteId: note.Id,
+	}
+
+	msgJson, err := json.Marshal(msgPayload)
+	if err != nil {
+		return nil, err
+	}
+	c.publisherService.Publish(ctx, msgJson)
 	return &dto.CreateNoteResponse{
 		Id: note.Id,
 	}, nil
@@ -114,6 +126,6 @@ func (c *noteService) MoveNote(ctx context.Context, req *dto.MoveNoteRequest) (*
 	}
 
 	return &dto.MoveNoteResponse{
-		Id:         note.Id,
+		Id: note.Id,
 	}, nil
 }

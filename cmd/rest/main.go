@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"golang-ai/internal/controller"
 	"golang-ai/internal/pkg/serverutils"
 	"golang-ai/internal/repository"
@@ -9,6 +11,8 @@ import (
 	"log"
 	"os"
 
+	"github.com/ThreeDotsLabs/watermill"
+	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/joho/godotenv"
@@ -34,9 +38,16 @@ func main() {
 	notebookRepository := repository.NewNotebookRepository(db)
 	noteRepository := repository.NewNoteRepository(db)
 
+	watermillLogger := watermill.NewStdLogger(false, false)
+	pubsub := gochannel.NewGoChannel(gochannel.Config{}, watermillLogger)
+
+	publisherService := service.NewPublisherService(pubsub, "embed_note_topic")
+
+	consumerService := service.NewConsumerService(pubsub, "embed_note_topic")
+
 	exampleService := service.NewExampleService(exampleRepository)
 	notebookService := service.NewNotebookService(notebookRepository, noteRepository, db)
-	noteService := service.NewNoteService(noteRepository)
+	noteService := service.NewNoteService(noteRepository, publisherService)
 
 	exampleController := controller.NewExampleController(exampleService)
 	notebookController := controller.NewNotebookController(notebookService)
@@ -46,5 +57,12 @@ func main() {
 	exampleController.RegisterRoutes(api)
 	notebookController.RegisterRoutes(api)
 	noteController.RegisterRoutes(api)
+
+	err := consumerService.Consume(context.Background())
+	if err != nil {
+		log.Fatal("Failed to start consumer:", err)
+	}
+
+	fmt.Println("Starting server on :3000")
 	log.Fatal(app.Listen(":3000"))
 }
