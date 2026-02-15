@@ -60,7 +60,7 @@ func (n *noteEmbeddingRepository) DeleteByNoteId(ctx context.Context, noteId uui
 func (n *noteEmbeddingRepository) SemanticSearch(ctx context.Context, embeddingValues []float32) ([]*entity.NoteEmbedding, error) {
 	rows, err := n.db.Query(
 		ctx, `SELECT id, note_id FROM note_embedding WHERE is_deleted = false
-		ORDER BY embedding_value <-> $1 ASC LIMIT 5`, pgvector.NewVector(embeddingValues),
+		ORDER BY embedding_value <=> $1 ASC LIMIT 5`, pgvector.NewVector(embeddingValues),
 	)
 	if err != nil {
 		return nil, err
