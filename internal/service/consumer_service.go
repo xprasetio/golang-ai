@@ -89,6 +89,7 @@ func (c *consumerService) processMessage(ctx context.Context, msg *message.Messa
 	res, err := embedding.GetGeminiEmbedding(
 		os.Getenv("GOOGLE_GEMINI_API_KEY"),
 		content,
+		"RETRIEVAL_DOCUMENT",
 	)
 	if err != nil {
 		panic(err)
